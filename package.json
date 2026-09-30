@@ -1,0 +1,13 @@
+{
+  "name": "defi-playground",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A local constant-product AMM simulator with virtual funds",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "test:browser": "node scripts/browser-smoke.js"
+  },
+  "engines": { "node": ">=22" }
+}

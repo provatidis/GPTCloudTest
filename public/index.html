@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101714">
+  <title>DeFi Playground · Learn by doing</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="DeFi Playground home"><span class="brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" fill="none" stroke="currentColor" stroke-width="2"/></svg></span> defi<span class="brand-light">playground</span></a>
+    <span class="sandbox-badge"><span class="status-dot"></span> Virtual sandbox</span>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">A LITTLE EXPERIMENT. A LOT TO LEARN.</p><h1>Make your first move.</h1><p class="subtitle">Explore decentralized finance with a pool you can play with.</p></div>
+      <button class="button secondary" id="reset">↻ Reset sandbox</button>
+    </section>
+    <div class="notice"><span class="notice-icon">i</span><p>All funds are virtual. No wallet connection, blockchain transactions, or live prices. Refreshing starts a new session.</p></div>
+    <section class="stats" aria-label="Sandbox overview">
+      <article class="stat"><span class="label">Your virtual portfolio</span><strong id="portfolio">$40,000.00</strong><span class="stat-note">Includes your share of pool assets</span></article>
+      <article class="stat"><span class="label">ETH / USDC pool price</span><strong id="price">$2,000.00</strong><span class="stat-note">Changes with each swap</span></article>
+      <article class="stat"><span class="label">Pool liquidity</span><strong id="liquidity">$400,000.00</strong><span class="stat-note">Valued at the fixed $2,000 reference price</span></article>
+      <article class="stat"><span class="label">Your pool share</span><strong id="share">0.00%</strong><span class="stat-note">Earn a share by adding liquidity</span></article>
+    </section>
+    <div class="workspace">
+      <section class="card trade-card">
+        <div class="tabs" role="tablist" aria-label="Pool actions">
+          <button id="swap-tab" class="tab active" role="tab" aria-selected="true" aria-controls="swap-panel" tabindex="0">Swap tokens</button>
+          <button id="lp-tab" class="tab" role="tab" aria-selected="false" aria-controls="lp-panel" tabindex="-1">Provide liquidity</button>
+        </div>
+        <div id="swap-panel" role="tabpanel" aria-labelledby="swap-tab">
+          <div class="section-heading"><h2>A swap, without the stakes.</h2><p>Trade against a constant-product pool.</p></div>
+          <form id="swap-form">
+            <div class="token-box"><div class="token-label"><label for="swap-amount">You pay</label><span id="input-balance"></span></div><div class="token-row"><input id="swap-amount" aria-describedby="swap-error" type="number" min="0" step="any" value="1" required><select id="input-token" aria-label="Token to pay"><option value="eth">ETH</option><option value="usdc">USDC</option></select></div></div>
+            <button class="direction" id="reverse" type="button" aria-label="Reverse swap direction">↓</button>
+            <div class="token-box output-box"><div class="token-label"><span>You receive (estimated)</span><span id="output-balance"></span></div><div class="token-row"><output id="swap-output">—</output><span id="output-token" class="token-pill">USDC</span></div></div>
+            <dl class="quote-details"><div><dt>Pool fee <span class="muted">(0.3%)</span></dt><dd id="fee">—</dd></div><div><dt>Price impact <span class="muted">(excluding fee)</span></dt><dd id="impact">—</dd></div><div><dt><label for="slippage">Slippage tolerance</label></dt><dd><select id="slippage"><option value="0.005">0.5%</option><option value="0.01" selected>1.0%</option><option value="0.03">3.0%</option></select></dd></div><div><dt>Minimum received</dt><dd id="minimum">—</dd></div></dl>
+            <p class="form-error" id="swap-error" role="status"></p><button class="button primary" id="swap-button" type="submit">Simulate swap <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+          </form>
+          <p class="fine-print">The pool executes instantly. Slippage tolerance guards against a changed quote; price impact is already included.</p>
+        </div>
+        <div id="lp-panel" role="tabpanel" aria-labelledby="lp-tab" hidden>
+          <div class="section-heading"><h2>Become part of the pool.</h2><p>Deposit both tokens at the pool’s current ratio.</p></div>
+          <form id="deposit-form"><div class="token-box"><label class="token-label" for="deposit-amount">ETH to deposit</label><div class="token-row"><input id="deposit-amount" type="number" min="0" step="any" value="1" required><span class="token-pill">ETH</span></div></div><dl class="quote-details"><div><dt>Matching USDC required</dt><dd id="deposit-usdc">—</dd></div><div><dt>LP tokens received</dt><dd id="deposit-lp">—</dd></div><div><dt>Your LP balance</dt><dd id="lp-balance">—</dd></div></dl><p class="form-error" id="lp-error" role="status"></p><button class="button primary" id="deposit-button" type="submit">Add virtual liquidity <span>+</span></button></form>
+          <div class="withdraw-box"><div><h3>Take your share back</h3><p>Withdraw all your LP tokens for both assets.</p></div><button id="withdraw" class="button secondary" disabled>Withdraw</button></div>
+          <p class="fine-print">Trading fees stay in the pool. LP tokens represent proportional ownership of its reserves.</p>
+        </div>
+      </section>
+      <section class="card curve-card">
+        <div class="card-heading"><div><p class="eyebrow">UNDER THE HOOD</p><h2>The pool makes the price.</h2></div><span class="formula">x × y = k</span></div>
+        <p class="body-copy">More ETH in, less USDC out. The balance of reserves determines your exchange rate, so larger trades move the price further.</p>
+        <svg id="curve" viewBox="0 0 560 240" role="img" aria-labelledby="curve-title"><title id="curve-title">Constant-product curve with the current ETH and USDC pool reserves</title><g class="grid"><path d="M48 25H535 M48 80H535 M48 135H535 M48 190H535"/></g><path id="curve-path" class="curve-line"/><circle id="curve-dot" r="7" class="curve-dot"/><text x="48" y="224" class="chart-label">ETH reserve →</text><text x="48" y="16" class="chart-label">USDC reserve</text><text x="535" y="224" text-anchor="end" id="curve-caption" class="chart-label"></text></svg>
+        <div class="reserve-grid"><div><span class="label"><span class="coin eth-coin">Ξ</span> ETH reserve</span><strong id="eth-reserve">100.0000</strong></div><div><span class="label"><span class="coin usdc-coin">$</span> USDC reserve</span><strong id="usdc-reserve">200,000.00</strong></div></div>
+        <div class="learn-note"><span>✦</span><p><strong>Try this:</strong> compare swapping 1 ETH with 5 ETH. Watch the price impact grow as your trade uses more of the pool.</p></div>
+      </section>
+      <section class="card loss-card"><div class="card-heading"><div><p class="eyebrow">WHAT IF?</p><h2>Explore impermanent loss.</h2></div><span class="small-badge">50 / 50 pool</span></div><p class="body-copy">When ETH’s market price changes, a rebalanced pool can be worth less than simply holding the original tokens.</p><div class="loss-result"><div><span class="label">ETH price change</span><strong id="price-change">+100%</strong></div><div><span class="label">Return vs. holding</span><strong id="loss">−5.72%</strong></div></div><label class="sr-only" for="price-ratio">ETH price relative to its starting price</label><input type="range" id="price-ratio" min="0.25" max="4" step="0.05" value="2"><div class="range-labels"><span>0.25×</span><span>Slide to explore</span><span>4×</span></div><p class="fine-print">An independent scenario assuming arbitrage, equal starting token values, and no fees. 1× means an unchanged price. It does not change your sandbox pool.</p></section>
+      <section class="card activity-card"><div class="card-heading"><div><p class="eyebrow">YOUR EXPERIMENTS</p><h2>Activity</h2></div><span class="small-badge" id="activity-count">0 actions</span></div><ol id="activity" aria-live="polite"><li class="empty-activity"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" fill="none" stroke="currentColor" stroke-width="2"/></svg><p>Your first experiment starts here.<br><span class="muted">Make a swap or add some liquidity.</span></p></li></ol></section>
+    </div>
+    <footer><span>Built for curiosity. Powered by math.</span><span>DeFi Playground · An educational simulation</span></footer>
+  </main>
+</body>
+</html>
