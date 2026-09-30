@@ -1,12 +1,28 @@
 import { initialState, quoteSwap, swap, quoteDeposit, deposit, withdraw, impermanentLoss, portfolioValue, MARKET_PRICE } from './amm.js';
+import { loadSession, saveSession, clearSession, MAX_HISTORY } from './storage.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (value, digits = 2) => value.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 const usd = (value) => `$${fmt(value)}`;
 const tokenFmt = (value, token) => `${fmt(value, token === 'eth' ? 6 : 2)} ${token.toUpperCase()}`;
-let state = initialState();
-let actions = 0;
+const saved = loadSession();
+let state = saved.state;
+let actions = saved.actions;
+let history = saved.history;
 let displayedQuote = null;
+const emptyActivity = $('activity').firstElementChild.cloneNode(true);
+
+function storageNotice(status) {
+  $('storage-status').textContent = status === 'unavailable'
+    ? 'Browser storage is unavailable. Changes may not survive refresh; Reset may not clear a previous saved session.'
+    : status === 'invalid'
+      ? 'The saved sandbox was invalid and has been reset. New actions will be saved in this browser.'
+      : 'Your sandbox is saved in this browser. Reset clears the saved session.';
+}
+
+function persist() {
+  storageNotice(saveSession(state, actions, history) ? 'saved' : 'unavailable');
+}
 
 function renderCurve() {
   const { eth, usdc } = state.pool;
@@ -79,10 +95,14 @@ function render() {
   renderCurve();
 }
 
-function logAction(title, details, icon) {
-  if (!actions) $('activity').replaceChildren();
-  actions += 1;
+function renderActivity() {
   $('activity-count').textContent = `${actions} ${actions === 1 ? 'action' : 'actions'}`;
+  $('activity').replaceChildren();
+  if (!history.length) $('activity').append(emptyActivity.cloneNode(true));
+  for (const item of history) $('activity').append(activityItem(item));
+}
+
+function activityItem({ title, details, icon, time: timestamp }) {
   const li = document.createElement('li');
   const symbol = document.createElement('span');
   symbol.className = 'activity-icon';
@@ -97,10 +117,18 @@ function logAction(title, details, icon) {
   text.append(heading, description);
   const time = document.createElement('time');
   time.className = 'activity-time';
-  time.dateTime = new Date().toISOString();
-  time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  time.dateTime = timestamp;
+  time.textContent = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   li.append(symbol, text, time);
-  $('activity').prepend(li);
+  return li;
+}
+
+function logAction(title, details, icon) {
+  actions += 1;
+  history.unshift({ title, details, icon, time: new Date().toISOString() });
+  history = history.slice(0, MAX_HISTORY);
+  renderActivity();
+  persist();
 }
 
 $('swap-form').addEventListener('submit', (event) => {
@@ -136,8 +164,9 @@ $('deposit-form').addEventListener('submit', (event) => {
 $('withdraw').addEventListener('click', () => {
   try {
     const next = withdraw(state, 1);
-    logAction('Liquidity withdrawn', `${tokenFmt(next.wallet.eth - state.wallet.eth, 'eth')} + ${tokenFmt(next.wallet.usdc - state.wallet.usdc, 'usdc')}`, '↓');
+    const details = `${tokenFmt(next.wallet.eth - state.wallet.eth, 'eth')} + ${tokenFmt(next.wallet.usdc - state.wallet.usdc, 'usdc')}`;
     state = next;
+    logAction('Liquidity withdrawn', details, '↓');
     render();
   } catch (error) { $('lp-error').textContent = error.message; }
 });
@@ -159,12 +188,12 @@ for (const id of ['swap', 'lp']) {
     $(next + '-tab').focus();
   });
 }
-const emptyActivity = $('activity').firstElementChild.cloneNode(true);
 $('reset').addEventListener('click', () => {
   state = initialState();
   actions = 0;
-  $('activity-count').textContent = '0 actions';
-  $('activity').replaceChildren(emptyActivity.cloneNode(true));
+  history = [];
+  renderActivity();
+  storageNotice(clearSession() ? 'new' : 'unavailable');
   $('swap-amount').value = '1';
   $('input-token').value = 'eth';
   $('deposit-amount').value = '1';
@@ -184,3 +213,5 @@ function renderLoss() {
 $('price-ratio').addEventListener('input', renderLoss);
 renderLoss();
 render();
+renderActivity();
+storageNotice(saved.status);

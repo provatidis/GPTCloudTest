@@ -52,6 +52,21 @@ const text = (id) => evaluate(`document.getElementById(${JSON.stringify(id)}).te
 const click = (id) => evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
 const fill = (id, value) => evaluate(`(() => { const el = document.getElementById(${JSON.stringify(id)}); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
 
+async function reload() {
+  const loaded = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { socket.removeEventListener('message', listener); reject(new Error('Reload timed out')); }, 15000);
+    const listener = ({ data }) => {
+      if (JSON.parse(data).method !== 'Page.loadEventFired') return;
+      clearTimeout(timer);
+      socket.removeEventListener('message', listener);
+      resolve();
+    };
+    socket.addEventListener('message', listener);
+  });
+  await call('Page.reload');
+  await loaded;
+}
+
 try {
   let base = process.env.TEST_BASE_URL;
   if (!base) {
@@ -63,7 +78,7 @@ try {
     console.log('PASS: missing resources, methods, and directory isolation');
   }
   if (!base.endsWith('/')) base += '/';
-  for (const path of ['', 'app.js', 'amm.js', 'styles.css']) assert.equal((await fetch(base + path)).status, 200);
+  for (const path of ['', 'app.js', 'amm.js', 'storage.js', 'styles.css']) assert.equal((await fetch(base + path)).status, 200);
   console.log('PASS: HTTP assets');
 
   const devtools = await start(process.env.CHROMIUM_BIN || 'chromium', ['--headless', '--no-sandbox', '--disable-dev-shm-usage', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: ['ignore', 'pipe', 'pipe'] }, /DevTools listening on (ws:\/\/[^\s]+)/);
@@ -95,6 +110,12 @@ try {
   assert.equal(await text('eth-reserve'), '101.0000');
   assert.equal(await text('activity-count'), '1 action');
   assert.ok((await text('activity')).includes('Swap complete'));
+  const swappedPortfolio = await text('portfolio');
+  await reload();
+  assert.equal(await text('eth-reserve'), '101.0000');
+  assert.equal(await text('portfolio'), swappedPortfolio);
+  assert.equal(await text('activity-count'), '1 action');
+  assert.ok((await text('activity')).includes('Swap complete'));
   await click('reverse');
   assert.equal(await text('output-token'), 'ETH');
   await click('swap-button');
@@ -112,11 +133,20 @@ try {
   await click('deposit-button');
   assert.equal(await text('share'), '0.99%');
   assert.equal(await text('eth-reserve'), '101.0000');
+  const lpBalance = await text('lp-balance');
+  await reload();
+  assert.equal(await text('share'), '0.99%');
+  assert.equal(await text('lp-balance'), lpBalance);
+  await click('lp-tab');
   await click('withdraw');
   assert.equal(await text('share'), '0.00%');
   assert.equal(await text('portfolio'), '$40,000.00');
   assert.equal(await text('eth-reserve'), '100.0000');
   assert.equal(await evaluate("document.getElementById('withdraw').disabled"), true);
+  await reload();
+  assert.equal(await text('share'), '0.00%');
+  assert.equal(await text('portfolio'), '$40,000.00');
+  assert.equal(await text('activity-count'), '2 actions');
   console.log('PASS: liquidity deposit and withdrawal through the interface');
 
   await fill('price-ratio', '1');
@@ -127,6 +157,36 @@ try {
   assert.equal(await text('loss'), '−5.72%');
   assert.equal(await text('activity-count'), '0 actions');
   assert.equal(await text('portfolio'), '$40,000.00');
+  assert.equal(await evaluate("localStorage.getItem('defi-sandbox-v1')"), null);
+  await reload();
+  assert.equal(await text('activity-count'), '0 actions');
+  assert.equal(await text('portfolio'), '$40,000.00');
+  console.log('PASS: balances, LP ownership, and activity survive reload; reset stays cleared');
+
+  await evaluate("localStorage.setItem('defi-sandbox-v1', '{broken')");
+  await reload();
+  assert.equal(await text('portfolio'), '$40,000.00');
+  assert.match(await text('storage-status'), /invalid/);
+  assert.equal(await evaluate("localStorage.getItem('defi-sandbox-v1')"), null);
+  const blockedStorageScript = await call('Page.addScriptToEvaluateOnNewDocument', { source: "Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Storage blocked', 'SecurityError'); } });" });
+  await reload();
+  assert.match(await text('storage-status'), /unavailable/);
+  await click('swap-button');
+  assert.equal(await text('eth-reserve'), '101.0000');
+  assert.equal(await text('activity-count'), '1 action');
+  await click('reset');
+  assert.equal(await text('portfolio'), '$40,000.00');
+  await call('Page.removeScriptToEvaluateOnNewDocument', { identifier: blockedStorageScript.identifier });
+  await reload();
+  const quotaScript = await call('Page.addScriptToEvaluateOnNewDocument', { source: "Storage.prototype.setItem = function () { throw new DOMException('Storage full', 'QuotaExceededError'); };" });
+  await reload();
+  await click('swap-button');
+  assert.equal(await text('eth-reserve'), '101.0000');
+  assert.match(await text('storage-status'), /unavailable/);
+  await call('Page.removeScriptToEvaluateOnNewDocument', { identifier: quotaScript.identifier });
+  await reload();
+  assert.equal(await text('portfolio'), '$40,000.00');
+  console.log('PASS: damaged data, blocked storage, and full storage do not break the app');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true);
   console.log('PASS: impermanent-loss scenarios, reset, and desktop layout');
 

@@ -33,7 +33,7 @@ The cloud onboarding interface does not expose a browser preview. To use the int
 npm test
 ```
 
-Tests cover swap pricing, reserve conservation, fees, stale-quote rejection, balance validation, liquidity accounting, withdrawals, and impermanent-loss reference scenarios.
+Tests cover swap pricing, reserve conservation, fees, stale-quote rejection, balance validation, liquidity accounting, withdrawals, impermanent-loss reference scenarios, storage restoration, reset, invalid data, and storage failures.
 
 For an optional browser smoke test, install Chromium or set `CHROMIUM_BIN` to its executable, then run `npm run test:browser`. It starts temporary servers and checks actual page interactions at desktop and mobile sizes. The cloud container uses Chromium with its browser sandbox disabled for this local test; the app itself needs no browser installation to serve its files.
 
@@ -55,12 +55,17 @@ Liquidity deposits match the pool ratio; LP tokens represent proportional owners
 
 The impermanent-loss calculator is a separate hypothetical 50/50 pool, assumes arbitrage after a market-price change, and excludes trading fees. It does not change the active simulation. Slippage tolerance protects the displayed quote, though this single-user simulator has no external trades or transaction delays.
 
-State exists only in browser memory and resets on refresh. Calculations use JavaScript floating-point numbers for learning, not production financial accounting. There are no real funds, live data, smart contracts, persistent accounts, or investment recommendations.
+Pool reserves, virtual wallet balances, and the latest 50 activity entries are saved in this browser's `localStorage` after successful transactions. The total action count is retained. Refreshing or reopening the site restores the saved sandbox; Reset sandbox removes it and restores the starting balances. Form inputs and the independent impermanent-loss slider start at their defaults on reload.
+
+Saved data is versioned and validated before use. Invalid or incompatible sessions fall back to the starting sandbox. If browser storage is unavailable or full, the app remains usable and displays a notice that changes may not survive refresh. Storage is specific to this browser and site; it does not sync across devices. Open tabs keep their own in-memory state, and the last successful save wins. Clearing browser data removes the saved session. No credentials or real assets are stored.
+
+Calculations use JavaScript floating-point numbers for learning, not production financial accounting. There are no real funds, live data, smart contracts, persistent accounts, or investment recommendations.
 
 ## Project structure
 
 - `public/amm.js`: pure pool and wallet calculations.
 - `public/app.js`: interactions and presentation.
+- `public/storage.js`: versioned, validated browser persistence.
 - `public/index.html`, `public/styles.css`: responsive interface.
 - `server.js`: dependency-free static HTTP server.
 - `test/amm.test.js`: Node test suite.
