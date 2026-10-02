@@ -7,18 +7,53 @@
   <title>DeFi Playground · Learn by doing</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.js"></script>
+  <script type="module" src="scenario-app.js"></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="./" aria-label="DeFi Playground home"><span class="brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" fill="none" stroke="currentColor" stroke-width="2"/></svg></span> defi<span class="brand-light">playground</span></a>
-    <span class="sandbox-badge"><span class="status-dot"></span> Virtual sandbox</span>
+    <nav class="site-nav" aria-label="Experiments"><a href="#lp-lab">Liquidity lab</a><a href="#swap-sandbox">Swap sandbox</a><span class="sandbox-badge"><span class="status-dot"></span> Virtual funds</span></nav>
   </header>
   <main>
     <section class="intro">
-      <div><p class="eyebrow">A LITTLE EXPERIMENT. A LOT TO LEARN.</p><h1>Make your first move.</h1><p class="subtitle">Explore decentralized finance with a pool you can play with.</p></div>
-      <button class="button secondary" id="reset">↻ Reset sandbox</button>
+      <div><p class="eyebrow">EXPERIMENT. UNDERSTAND. SHARE.</p><h1>Understand your liquidity.</h1><p class="subtitle">Compare holding with providing liquidity, under assumptions you can inspect.</p></div>
     </section>
     <div class="notice"><span class="notice-icon">i</span><p>All funds are virtual. No wallet connection, blockchain transactions, or live prices. <span id="storage-status" role="status">Your sandbox is saved in this browser. Reset clears the saved session.</span></p></div>
+    <section id="lp-lab" class="scenario-section" aria-labelledby="scenario-heading">
+      <div class="lab-heading"><div><p class="eyebrow">A QUESTION WORTH EXPLORING</p><h2 id="scenario-heading">Provide liquidity, or hold?</h2><p class="body-copy">See dollar outcomes for a full-range 50/50 ETH/USDC position.</p></div><span class="small-badge">Constant-product model · v1</span></div>
+      <div class="scenario-layout">
+        <div class="card scenario-controls">
+          <h3>Your assumptions</h3><p class="body-copy">Start with equal dollar amounts of ETH and USDC.</p>
+          <form id="scenario-form">
+            <div class="scenario-field"><label for="scenario-investment">Initial investment <span>USD</span></label><input id="scenario-investment" type="number" min="1" max="1000000000" step="any" value="5000" required aria-describedby="scenario-error"></div>
+            <div class="scenario-field"><label for="scenario-start">Starting ETH price <span>USD</span></label><input id="scenario-start" type="number" min="0.01" max="10000000" step="any" value="2000" required aria-describedby="scenario-error"></div>
+            <div class="scenario-field"><label for="scenario-future">Future ETH price <span>USD</span></label><input id="scenario-future" type="number" min="0.01" max="10000000" step="any" value="4000" required aria-describedby="scenario-error"></div>
+            <div class="scenario-presets" aria-label="Future price presets"><button type="button" data-price-multiple="0.5" aria-pressed="false">−50%</button><button type="button" data-price-multiple="1" aria-pressed="false">Unchanged</button><button type="button" data-price-multiple="2" aria-pressed="true">+100%</button></div>
+            <div class="scenario-field"><label for="scenario-fees">Assumed fee income <span>USD · optional</span></label><input id="scenario-fees" type="number" min="0" max="1000000000" step="any" value="100" aria-describedby="scenario-fee-help scenario-error"><p id="scenario-fee-help" class="fine-print">Total fees earned by your position over this scenario, added as separate USD cash. This is an assumption, not a yield forecast.</p></div>
+            <p id="scenario-error" class="form-error" role="status"></p>
+          </form>
+          <button id="scenario-share" class="button primary" type="button">Copy scenario link <span>→</span></button>
+          <div class="scenario-actions"><button id="scenario-export" class="button secondary" type="button">Export CSV</button><button id="scenario-reset" class="text-button" type="button">Reset scenario</button></div>
+          <div id="scenario-share-wrap" class="share-wrap" hidden><p id="scenario-share-status" role="status"></p><label class="sr-only" for="scenario-share-url">Scenario link</label><input id="scenario-share-url" type="text" readonly></div>
+          <p id="scenario-link-status" class="fine-print" role="status"></p>
+          <p class="fine-print">This lab is independent of your saved swap sandbox.</p>
+        </div>
+        <div class="card scenario-output">
+          <div id="scenario-invalid" class="scenario-invalid" hidden><h3>Enter a valid scenario to compare outcomes.</h3><p class="body-copy">Check the highlighted input message. Results and sharing will return when all inputs are valid.</p></div>
+          <div id="scenario-results">
+            <div class="scenario-totals"><div><span class="label">Keep the original tokens</span><strong id="scenario-hold-value">—</strong><span id="scenario-hold-return" class="stat-note"></span></div><div><span class="label">Provide liquidity + assumed fees</span><strong id="scenario-lp-value">—</strong><span id="scenario-lp-return" class="stat-note"></span></div></div>
+            <p id="scenario-verdict" class="scenario-verdict" aria-live="polite"></p>
+            <div class="scenario-metrics"><div><span class="label">ETH price change</span><strong id="scenario-price-change">—</strong></div><div><span class="label">Impermanent loss · before fees</span><strong id="scenario-il">—</strong></div><div><span class="label">Fees needed to match holding</span><strong id="scenario-break-even">—</strong></div></div>
+            <figure class="scenario-figure"><div class="scenario-chart-heading"><h3>Explore the price range</h3><div class="chart-legend"><span><i class="legend-hold"></i>Holding</span><span><i class="legend-lp"></i>LP + fees</span></div></div><svg id="scenario-chart" viewBox="0 0 620 260" role="img" aria-labelledby="scenario-chart-title"><title id="scenario-chart-title">Holding compared with liquidity as ETH market price changes</title><g class="grid"><path d="M60 28H590 M60 118H590 M60 208H590"/></g><text id="scenario-y-high" x="52" text-anchor="end" class="chart-label"></text><text id="scenario-y-mid" x="52" text-anchor="end" class="chart-label"></text><text id="scenario-y-zero" x="52" text-anchor="end" class="chart-label"></text><path id="scenario-chart-marker" class="scenario-marker"/><path id="scenario-hold-path" class="scenario-hold-line"/><path id="scenario-lp-path" class="curve-line"/><circle id="scenario-hold-dot" r="5" class="scenario-hold-dot"/><circle id="scenario-lp-dot" r="5" class="curve-dot"/><text id="scenario-x-low" x="60" y="233" class="chart-label"></text><text id="scenario-x-high" x="590" y="233" text-anchor="end" class="chart-label"></text><text x="325" y="251" text-anchor="middle" class="chart-label">Future ETH market price →</text></svg><figcaption id="scenario-chart-note" class="fine-print"></figcaption></figure>
+            <div class="scenario-assets"><div><h3>Assets if you hold</h3><p id="scenario-hold-eth"></p><p id="scenario-hold-usdc"></p></div><div><h3>Assets from liquidity</h3><p id="scenario-lp-eth"></p><p id="scenario-lp-usdc"></p><p id="scenario-cash-fees" class="muted"></p></div></div>
+            <p class="fine-print">LP assets before assumed fee income: <strong id="scenario-lp-before-fees"></strong>. Arbitrage trades rebalance the pool to your future ETH price, changing the token amounts you can withdraw.</p>
+          </div>
+        </div>
+      </div>
+      <div id="scenario-comparison-card" class="card comparison-card"><div class="card-heading"><div><h3>Compare outcomes</h3><p class="body-copy">Select a price to explore it. Investment and assumed fee income stay the same in every row.</p></div></div><div class="table-scroll" tabindex="0" role="region" aria-label="Scenario comparison table"><table class="scenario-table"><caption class="sr-only">Holding and liquidity outcomes under different future ETH prices, with the same assumed fees</caption><thead><tr><th scope="col">Future ETH price</th><th scope="col">Holding</th><th scope="col">LP + fees</th><th scope="col">LP minus holding</th><th scope="col">IL before fees</th></tr></thead><tbody id="scenario-comparisons"></tbody></table></div><p class="fine-print">Values are hypothetical outcomes, not probabilities or recommendations.</p></div>
+      <details class="model-details"><summary>How this model works</summary><div><p>A full-range constant-product position starts with 50% ETH and 50% USDC by dollar value. USDC stays at $1. Ideal, frictionless arbitrage brings the pool price to the future market price.</p><p>For an initial investment V and price ratio r = future price / starting price, holding is worth V × (1 + r) / 2. The LP assets are worth V × √r before fee income. Initial ETH = V / (2 × starting price); after rebalancing, LP ETH = initial ETH / √r and LP USDC = initial USDC × √r.</p><p>Fee income is your assumed total for this position, added as separate USD cash at the end. It is held fixed across the comparison, does not compound, and is not inferred from market prices or trading volume. The model excludes gas, incentives, depegging, and concentrated liquidity. It shows endpoints, not a trading path.</p><p>Model version: cp50-v1. Shared links and CSV exports include the assumptions and model version so another person can reproduce the calculation.</p></div></details>
+    </section>
+    <div id="swap-sandbox" class="lab-heading sandbox-heading"><div><p class="eyebrow">LEARN BY MAKING A MOVE</p><h2>Swap sandbox</h2><p class="body-copy">Explore pool mechanics with your own virtual balances.</p></div><button class="button secondary" id="reset">↻ Reset sandbox</button></div>
     <section class="stats" aria-label="Sandbox overview">
       <article class="stat"><span class="label">Your virtual portfolio</span><strong id="portfolio">$40,000.00</strong><span class="stat-note">Includes your share of pool assets</span></article>
       <article class="stat"><span class="label">ETH / USDC pool price</span><strong id="price">$2,000.00</strong><span class="stat-note">Changes with each swap</span></article>

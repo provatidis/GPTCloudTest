@@ -1,7 +1,7 @@
 // Optional real-browser smoke test, using Chromium's DevTools protocol and Node built-ins.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { once } from 'node:events';
@@ -67,6 +67,29 @@ async function reload() {
   await loaded;
 }
 
+function nextEvent(method) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { socket.removeEventListener('message', listener); reject(new Error(`Event timed out: ${method}`)); }, 15000);
+    const listener = ({ data }) => {
+      const message = JSON.parse(data);
+      if (message.method !== method) return;
+      clearTimeout(timer);
+      socket.removeEventListener('message', listener);
+      resolve(message.params);
+    };
+    socket.addEventListener('message', listener);
+  });
+}
+
+async function navigate(url) {
+  // Reopen the link as a new document; changing just a fragment is not a page load.
+  for (const destination of ['about:blank', url]) {
+    const loaded = nextEvent('Page.loadEventFired');
+    await call('Page.navigate', { url: destination });
+    await loaded;
+  }
+}
+
 try {
   let base = process.env.TEST_BASE_URL;
   if (!base) {
@@ -78,7 +101,7 @@ try {
     console.log('PASS: missing resources, methods, and directory isolation');
   }
   if (!base.endsWith('/')) base += '/';
-  for (const path of ['', 'app.js', 'amm.js', 'storage.js', 'styles.css']) assert.equal((await fetch(base + path)).status, 200);
+  for (const path of ['', 'app.js', 'amm.js', 'storage.js', 'scenario.js', 'scenario-app.js', 'styles.css']) assert.equal((await fetch(base + path)).status, 200);
   console.log('PASS: HTTP assets');
 
   const devtools = await start(process.env.CHROMIUM_BIN || 'chromium', ['--headless', '--no-sandbox', '--disable-dev-shm-usage', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: ['ignore', 'pipe', 'pipe'] }, /DevTools listening on (ws:\/\/[^\s]+)/);
@@ -106,10 +129,82 @@ try {
   await evaluate(`new Promise((resolve, reject) => { const deadline = Date.now() + 10000; const check = () => { if (document.getElementById('swap-output')?.textContent === '1,974.32') resolve(true); else if (Date.now() > deadline) reject(new Error('App did not initialize')); else setTimeout(check, 50); }; check(); })`);
   assert.equal(await text('portfolio'), '$40,000.00');
   assert.equal(await evaluate("document.querySelector('.brand').href"), base, 'Home link stays inside the project path');
+  assert.equal(await text('scenario-hold-value'), '$7,500.00');
+  assert.equal(await text('scenario-lp-value'), '$7,171.07');
+  assert.equal(await text('scenario-break-even'), '$428.93');
+  assert.equal(await text('scenario-lp-eth'), '0.883883 ETH');
+  await evaluate("document.querySelector('[data-price-multiple=\"1\"]').click()");
+  assert.equal(await text('scenario-lp-value'), '$5,100.00');
+  assert.equal(await text('scenario-hold-value'), '$5,000.00');
+  await fill('scenario-fees', '');
+  assert.equal(await text('scenario-lp-value'), '$5,000.00');
+  await fill('scenario-investment', '-1');
+  assert.equal(await evaluate("document.getElementById('scenario-share').disabled"), true);
+  assert.equal(await evaluate("document.getElementById('scenario-results').hidden"), true);
+  assert.equal(await evaluate("document.getElementById('scenario-comparison-card').hidden"), true);
+  await click('scenario-reset');
+  await evaluate("document.querySelector('#scenario-comparisons tr:first-child button').click()");
+  assert.equal(await text('scenario-hold-value'), '$3,750.00');
+  assert.equal(await text('scenario-lp-value'), '$3,635.53');
+  await click('scenario-reset');
+  const chart = await evaluate("document.getElementById('scenario-lp-path').getAttribute('d')");
+  await fill('scenario-future', '3000');
+  assert.equal(await text('scenario-hold-value'), '$6,250.00');
+  assert.equal(await evaluate("document.querySelectorAll('#scenario-comparisons tr').length"), 4);
+  await fill('scenario-fees', '250');
+  assert.notEqual(await evaluate("document.getElementById('scenario-lp-path').getAttribute('d')"), chart);
+  await evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value) => { window.copiedScenarioLink = value; } } });");
+  await click('scenario-share');
+  const sharedURL = await evaluate("document.getElementById('scenario-share-url').value");
+  assert.equal(await evaluate('window.copiedScenarioLink'), sharedURL);
+  assert.ok(sharedURL.includes('scenario=cp50-v1'));
+  assert.ok(!sharedURL.includes('wallet'));
+  assert.match(await text('scenario-share-status'), /copied/);
+
+  await call('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: profile, eventsEnabled: true });
+  const exported = nextEvent('Browser.downloadWillBegin');
+  const completed = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { socket.removeEventListener('message', listener); reject(new Error('CSV download timed out')); }, 15000);
+    const listener = ({ data }) => {
+      const message = JSON.parse(data);
+      if (message.method !== 'Browser.downloadProgress' || message.params.state !== 'completed') return;
+      clearTimeout(timer);
+      socket.removeEventListener('message', listener);
+      resolve();
+    };
+    socket.addEventListener('message', listener);
+  });
+  await click('scenario-export');
+  const download = await exported;
+  await completed;
+  assert.equal(download.suggestedFilename, 'defi-liquidity-scenarios-cp50-v1.csv');
+  const csv = await readFile(join(profile, download.suggestedFilename), 'utf8');
+  assert.ok(csv.startsWith('model,investment_usd,'));
+  assert.ok(csv.includes('cp50-v1,5000,2000,3000,250,'));
+  console.log('PASS: scenario reference values, presets, comparisons, validation, chart updates, share copy, and CSV download');
   await click('swap-button');
   assert.equal(await text('eth-reserve'), '101.0000');
   assert.equal(await text('activity-count'), '1 action');
   assert.ok((await text('activity')).includes('Swap complete'));
+  await navigate(sharedURL);
+  assert.equal(await evaluate("document.getElementById('scenario-future').value"), '3000', await evaluate("location.hash + ' ' + document.getElementById('scenario-link-status').textContent"));
+  assert.equal(await evaluate("document.getElementById('scenario-fees').value"), '250');
+  assert.equal(await text('scenario-hold-value'), '$6,250.00');
+  assert.equal(await text('eth-reserve'), '101.0000');
+  assert.equal(await text('activity-count'), '1 action');
+  await evaluate("new Promise((resolve) => { addEventListener('hashchange', () => resolve(), { once: true }); location.hash = '#scenario=cp50-v1&investment=5000&start=2000&future=2000&fees=0'; })");
+  assert.equal(await text('scenario-hold-value'), '$5,000.00');
+  assert.equal(await text('scenario-lp-value'), '$5,000.00');
+  await evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Clipboard denied'); } } });");
+  await click('scenario-share');
+  assert.equal(await evaluate("document.getElementById('scenario-share-wrap').hidden"), false);
+  assert.match(await text('scenario-share-status'), /Copy the link/);
+  await navigate(base + '#scenario=cp50-v99&investment=5000&start=2000&future=4000&fees=100');
+  assert.match(await text('scenario-link-status'), /unsupported/);
+  assert.equal(await text('scenario-hold-value'), '$7,500.00');
+  assert.equal(await text('eth-reserve'), '101.0000');
+  await navigate(base);
+  console.log('PASS: shared links restore assumptions without overwriting saved balances; clipboard fallback and invalid links');
   const swappedPortfolio = await text('portfolio');
   await reload();
   assert.equal(await text('eth-reserve'), '101.0000');
@@ -188,6 +283,10 @@ try {
   assert.equal(await text('portfolio'), '$40,000.00');
   console.log('PASS: damaged data, blocked storage, and full storage do not break the app');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true);
+  await fill('scenario-future', '1000');
+  assert.equal(await text('scenario-hold-value'), '$3,750.00');
+  assert.equal(await text('scenario-lp-value'), '$3,635.53');
+  await click('scenario-reset');
   console.log('PASS: impermanent-loss scenarios, reset, and desktop layout');
 
   if (process.env.SCREENSHOT_PATH) {
@@ -196,6 +295,12 @@ try {
   }
   await call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   assert.equal(await evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true);
+  await fill('scenario-future', '1000');
+  assert.equal(await text('scenario-hold-value'), '$3,750.00');
+  await click('scenario-share');
+  assert.ok((await evaluate("document.getElementById('scenario-share-url').value")).includes('future=1000'));
+  assert.equal(await evaluate('document.documentElement.scrollWidth <= window.innerWidth'), true);
+  await click('scenario-reset');
   await click('swap-button');
   assert.equal(await text('activity-count'), '1 action');
   assert.deepEqual(errors, [], 'No uncaught browser errors');
