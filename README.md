@@ -1,6 +1,6 @@
-# DeFi Playground
+# Degenerator
 
-A browser-based DeFi lab for reproducible liquidity scenarios and virtual pool experiments. Compare holding with a 50/50 ETH/USDC position, share your assumptions, export results, and explore swaps without connecting a wallet.
+Your DeFi playground. Degenerator is a browser-based lab for reproducible liquidity scenarios and virtual pool experiments. Compare holding with a 50/50 ETH/USDC position, share your assumptions, export results, and explore swaps without connecting a wallet.
 
 ## Liquidity scenario lab
 
@@ -41,26 +41,41 @@ Fee income is an explicit assumption added as separate USD cash at the end; it d
 
 The workflow in `.github/workflows/pages.yml` tests the project and publishes only `public/` whenever `main` changes. It also runs tests on pull requests without publishing them. No hosting credentials or backend server are needed.
 
-Enable it once in the repository's **Settings → Pages → Build and deployment → Source → GitHub Actions**. If the first workflow run happened before Pages was enabled, open **Actions → Test and publish DeFi Playground → Run workflow** and select `main`.
+Enable it once in the repository's **Settings → Pages → Build and deployment → Source → GitHub Actions**. If the first workflow run happened before Pages was enabled, open **Actions → Test and publish Degenerator → Run workflow** and select `main`.
 
-After a successful deployment, the preview is available at https://provatidis.github.io/GPTCloudTest/. The URL is not live until Pages is enabled and the deployment finishes. Subsequent pushes to `main` update the same address. Repository settings and the GitHub plan must permit Pages publishing.
+After a successful deployment, the preview is available at https://provatidis.github.io/degenerator/. Subsequent pushes to `main` update the same address. Repository settings and the GitHub plan must permit Pages publishing.
+
+### Existing clones and shared scenarios
+
+The repository was renamed from `GPTCloudTest` to `degenerator`. Update existing clones with:
+
+```sh
+git remote set-url origin https://github.com/provatidis/degenerator.git
+```
+
+GitHub redirects old repository links, but does not automatically redirect the old Pages site. For a previously shared scenario, replace `/GPTCloudTest/` in the URL with `/degenerator/` and retain the entire `#scenario=...` fragment. Asset and home links are relative, and new scenario links use the current site address.
+
+The browser-storage key remains `defi-sandbox-v1`, preserving saved sandbox sessions on the same `provatidis.github.io` origin. A different origin, including a custom domain, has separate browser storage. Existing local checkout directories can keep their names. If a cloud checkout directory is renamed, update its working-directory and startup configuration to the actual path.
 
 ## Run
 
 Requires Node.js 22 or newer. No dependencies or installation step are needed.
 
 ```sh
-cd /workspace/GPTCloudTest
+git clone https://github.com/provatidis/degenerator.git
+cd degenerator
 npm start
 ```
 
-The HTTP server defaults to loopback port 3000. Set `HOST` and `PORT` to change its binding. It serves only the `public/` directory. To verify it from the cloud machine:
+For an existing clone, pull the latest `main` and run `npm start` from its checkout directory. No installation step is needed.
+
+The HTTP server defaults to loopback port 3000. Set `HOST` and `PORT` to change its binding. It serves only the `public/` directory. To verify it:
 
 ```sh
 curl --fail http://127.0.0.1:3000/
 ```
 
-The cloud onboarding interface does not expose a browser preview. To use the interface locally, clone the repository, run `npm start` from its directory, and open your browser at loopback port 3000. No wallet, API key, network connection, or blockchain node is required.
+Open http://127.0.0.1:3000/ in your browser. No wallet, API key, network connection, or blockchain node is required to run the app locally.
 
 ## Test
 

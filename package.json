@@ -1,9 +1,9 @@
 {
-  "name": "defi-playground",
+  "name": "degenerator",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A local constant-product AMM simulator with virtual funds",
+  "description": "A DeFi playground for reproducible liquidity scenarios and virtual pool experiments",
   "scripts": {
     "start": "node server.js",
     "test": "node --test",

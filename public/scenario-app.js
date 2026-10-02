@@ -158,7 +158,7 @@ $('scenario-export').addEventListener('click', () => {
   const url = URL.createObjectURL(new Blob([scenarioCSV(current)], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'defi-liquidity-scenarios-cp50-v1.csv';
+  link.download = 'degenerator-liquidity-scenarios-cp50-v1.csv';
   document.body.append(link);
   link.click();
   link.remove();

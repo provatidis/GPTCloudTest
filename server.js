@@ -32,6 +32,6 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(Number(process.env.PORT || 3000), process.env.HOST || '127.0.0.1', () => {
-  console.log(`DeFi Playground listening on port ${server.address().port}`);
+  console.log(`Degenerator listening on port ${server.address().port}`);
 });
 for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => server.close());

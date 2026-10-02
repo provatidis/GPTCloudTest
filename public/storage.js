@@ -1,5 +1,6 @@
 import { initialState } from './amm.js';
 
+// Preserve existing saved sessions across branding and repository-path changes.
 export const STORAGE_KEY = 'defi-sandbox-v1';
 export const MAX_HISTORY = 50;
 const getBrowserStorage = () => globalThis.localStorage;

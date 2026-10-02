@@ -1,4 +1,4 @@
-name: Test and publish DeFi Playground
+name: Test and publish Degenerator
 
 on:
   push:

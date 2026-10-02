@@ -8,7 +8,7 @@ import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 
 const project = fileURLToPath(new URL('../', import.meta.url));
-const profile = await mkdtemp(join(tmpdir(), 'defi-browser-'));
+const profile = await mkdtemp(join(tmpdir(), 'degenerator-browser-'));
 const children = [];
 let socket;
 let sequence = 0;
@@ -177,7 +177,7 @@ try {
   await click('scenario-export');
   const download = await exported;
   await completed;
-  assert.equal(download.suggestedFilename, 'defi-liquidity-scenarios-cp50-v1.csv');
+  assert.equal(download.suggestedFilename, 'degenerator-liquidity-scenarios-cp50-v1.csv');
   const csv = await readFile(join(profile, download.suggestedFilename), 'utf8');
   assert.ok(csv.startsWith('model,investment_usd,'));
   assert.ok(csv.includes('cp50-v1,5000,2000,3000,250,'));

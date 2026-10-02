@@ -4,14 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101714">
-  <title>DeFi Playground · Learn by doing</title>
+  <meta name="description" content="Explore reproducible liquidity scenarios and virtual swaps in Degenerator, a DeFi playground with transparent assumptions.">
+  <title>Degenerator · Your DeFi playground</title>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.js"></script>
   <script type="module" src="scenario-app.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="./" aria-label="DeFi Playground home"><span class="brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" fill="none" stroke="currentColor" stroke-width="2"/></svg></span> defi<span class="brand-light">playground</span></a>
+    <a class="brand" href="./" aria-label="Degenerator home"><span class="brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" fill="none" stroke="currentColor" stroke-width="2"/></svg></span> Degenerator</a>
     <nav class="site-nav" aria-label="Experiments"><a href="#lp-lab">Liquidity lab</a><a href="#swap-sandbox">Swap sandbox</a><span class="sandbox-badge"><span class="status-dot"></span> Virtual funds</span></nav>
   </header>
   <main>
@@ -94,7 +95,7 @@
       <section class="card loss-card"><div class="card-heading"><div><p class="eyebrow">WHAT IF?</p><h2>Explore impermanent loss.</h2></div><span class="small-badge">50 / 50 pool</span></div><p class="body-copy">When ETH’s market price changes, a rebalanced pool can be worth less than simply holding the original tokens.</p><div class="loss-result"><div><span class="label">ETH price change</span><strong id="price-change">+100%</strong></div><div><span class="label">Return vs. holding</span><strong id="loss">−5.72%</strong></div></div><label class="sr-only" for="price-ratio">ETH price relative to its starting price</label><input type="range" id="price-ratio" min="0.25" max="4" step="0.05" value="2"><div class="range-labels"><span>0.25×</span><span>Slide to explore</span><span>4×</span></div><p class="fine-print">An independent scenario assuming arbitrage, equal starting token values, and no fees. 1× means an unchanged price. It does not change your sandbox pool.</p></section>
       <section class="card activity-card"><div class="card-heading"><div><p class="eyebrow">YOUR EXPERIMENTS</p><h2>Activity</h2></div><span class="small-badge" id="activity-count">0 actions</span></div><ol id="activity" aria-live="polite"><li class="empty-activity"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14" fill="none" stroke="currentColor" stroke-width="2"/></svg><p>Your first experiment starts here.<br><span class="muted">Make a swap or add some liquidity.</span></p></li></ol></section>
     </div>
-    <footer><span>Built for curiosity. Powered by math.</span><span>DeFi Playground · An educational simulation</span></footer>
+    <footer><span>Built for curiosity. Powered by math.</span><span>Degenerator · An educational simulation</span></footer>
   </main>
 </body>
 </html>
